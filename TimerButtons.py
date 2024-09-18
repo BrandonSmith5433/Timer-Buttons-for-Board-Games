@@ -1,5 +1,4 @@
 from time import sleep, time
-import csv
 import random
 import SimonSays , WhackAMole, SoundTest
 import ButtonSetup, ExportData
@@ -9,7 +8,8 @@ auxillary_button_list = ButtonSetup.SetupAcceptButton.auxillary_button_list
 active_player_button_list = []
 turn_order_button_list = []
 time_counter_list = []
-
+turn_in_progress = True
+player_selection = False
 
 def gameTracker():
     game_state = "setup"
@@ -26,11 +26,14 @@ def gameTracker():
 def gameSetup(game_state):
     '''This function will allow players to determine which buttons will be included in the current game
     the buttons will remain on and can be turned off by pressing, this will remove them from the current 
-    game, they can also be turned back on.  Confirmation is on press of the first auxillary button.This is also the point at which a custom game can be played by using other auxillary buttons'''
+    game, they can also be turned back on.  Confirmation is on press of the first auxillary button.
+    This is also the point at which a custom game can be played by using other auxillary buttons'''
+
     confirm_active_players = False
 
 #What the buttons will do during setup, pressing a lit button turns it off and removes it from active players
 #and vice versa
+
     def gameSetupPressed(button):
         if button in active_player_button_list:
             active_player_button_list.remove(button)
@@ -56,18 +59,16 @@ def gameSetup(game_state):
         button.ledBlink(on_time = .02, off_time = .02, count = 5, background = True)
     sleep(1.5)
 
-    #Turns all buttons on and adds them to active players
-    for button in player_button_list:
-        button.ledOn()
-        active_player_button_list.append(button)
-    
     #loop for waiting on confirmation
     while confirm_active_players == False:
         for button in player_button_list:
             button.when_pressed = gameSetupPressed
         for button in auxillary_button_list:
             button.when_pressed = gameSetupAuxillaryPressed
+        for button in active_player_button_list:
+            button.ledToggle()
         sleep(.2)
+        
         
     #Resets button state so that nothing will happen when pressed
     for button in player_button_list:
@@ -79,22 +80,22 @@ def gameSetup(game_state):
 def determineTurnOrder(game_state):
     
     player_selection = False
-    turn_in_progress = True
     
     def determineTurnOrderPressed_Auxillary(button):
-        nonlocal player_selection
         if len(turn_order_button_list) == len(active_player_button_list):
+            global player_selection
             player_selection = True
 
     def determineTurnOrderPressed(button):
-        
         if button in turn_order_button_list:
             turn_order_button_list.remove(button)
             button.ledOff()
         else:
             turn_order_button_list.append(button)
             button.ledOn()
-            
+
+
+    ### Some extra blinking here:       
     for button in active_player_button_list:
         button.ledBlink(on_time = .2, off_time = .2, count = 10, background = True)
     sleep(2)
@@ -154,7 +155,6 @@ def gameRound(game_state, time_counter_list):
         if active_player.held_down == True:
             active_player.held_down = False
         else:
-            global turn_in_progress
             turn_in_progress = False
 
 
@@ -178,7 +178,6 @@ def gameRound(game_state, time_counter_list):
     
     def playerTurn(active_player):
         active_player.pauseTime = 0
-        global turn_in_progress
         turn_in_progress = True
         print(active_player)
         active_player.ledOn()
@@ -202,11 +201,11 @@ def gameRound(game_state, time_counter_list):
 
 
     while round_complete == False:
-        if (active_player_button_list.index(active_player) + 1) == len(active_player_button_list):
-            active_player = active_player_button_list[0]
+        if (turn_order_button_list.index(active_player) + 1) == len(turn_order_button_list):
+            active_player = turn_order_button_list[0]
             playerTurn(active_player)
         else:
-            active_player = active_player_button_list[active_player_button_list.index(active_player) + 1]
+            active_player = turn_order_button_list[turn_order_button_list.index(active_player) + 1]
             playerTurn(active_player)
 
     if game_complete == True:
@@ -220,7 +219,7 @@ def gameEnd():
 
 #SimonSays.simon_says_game()
 #WhackAMole.whack_a_mole_game()
-gameTracker()
+#gameTracker()
 #soundTest()
     
 ##below is for testing
