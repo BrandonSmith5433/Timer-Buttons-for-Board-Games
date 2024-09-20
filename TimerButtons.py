@@ -10,6 +10,7 @@ turn_order_button_list = []
 time_counter_list = []
 turn_in_progress = True
 player_selection = False
+pause_counter_dict = {}
 
 def gameTracker():
     game_state = "setup"
@@ -117,9 +118,20 @@ def determineTurnOrder(game_state):
     return ("game_round")
     
 def gameRound(game_state, time_counter_list):
+
+    ##Creates a list of times for players active in the game
     if not time_counter_list:
         for button in active_player_button_list:
             time_counter_list.append(0)
+    
+    if not pause_counter_dict:
+        x = 0
+        for button in active_player_button_list:
+            pause_counter_dict[button] = 0
+            pause_counter_dict["count" + x] = 0
+            x += 1
+
+
     round_complete = False
     game_complete = False
     
@@ -127,26 +139,33 @@ def gameRound(game_state, time_counter_list):
     for button in turn_order_button_list:
         button.ledBlink(on_time = .15, off_time = .2, count = (turn_order_button_list.index(button) + 1), background = True)
 
-    def pause(active_player):
-        active_player.held_down = True
+    def pause(button, active_player):
+        '''Allows any player to pause the game and any player to unpause the game.  The time should only count for the active player and will be subtracted from his total turn time
+           Secondary function allows us to see who paused the game the longest and the most.'''
+        
+        resetButtons()
+
+
+        button.held_down = True
+
         active_player.is_paused = True
         pause_start_time = time()
-        resetButtons()
-        sleep(.5)
-        while active_player.is_paused == True:
-            active_player.ledOn()
-            active_player.when_released = unpause
-            sleep(.1)
-            active_player.ledOff()
-            sleep(.1)
-        active_player.held_down = False
-        sleep(.2)
-        active_player.ledOn()
-        resetButtons()
-        active_player.pauseTime += (time() - pause_start_time)
-        print(active_player.pauseTime)
         
 
+        while active_player.is_paused == True:
+            
+            active_player.ledOff()
+            button.ledOn()
+
+            for button in active_player_button_list:
+                button.when_released = unpause
+            
+        resetButtons()
+
+        active_player.pauseTime += (time() - pause_start_time)
+        pause_counter_dict[button] += (time() - pause_start_time)
+        pause_counter_dict["count" + active_player_button_list.index(button)] += 1
+        
     def unpause(active_player):
         active_player.is_paused = False
 
@@ -179,14 +198,13 @@ def gameRound(game_state, time_counter_list):
     def playerTurn(active_player):
         active_player.pauseTime = 0
         turn_in_progress = True
-        print(active_player)
         active_player.ledOn()
         player_turn_start_time = time()
-        total_pause_time = 0
         while turn_in_progress == True:
             active_player.when_released = nextTurn
-            active_player.when_held = pause
-            sleep(.2)
+            for button in active_player_button_list:
+                button.when_held = pause(button, active_player)
+        sleep(.2)
         resetButtons()
         active_player.ledOff()
         player_turn_end_time = time()
