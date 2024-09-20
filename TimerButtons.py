@@ -79,7 +79,8 @@ def gameSetup(game_state):
     return("determine_turn_order")
 
 def determineTurnOrder(game_state):
-    
+
+    global player_selection
     player_selection = False
     
     def determineTurnOrderPressed_Auxillary(button):
@@ -95,11 +96,6 @@ def determineTurnOrder(game_state):
             turn_order_button_list.append(button)
             button.ledOn()
 
-
-    ### Some extra blinking here:       
-    for button in active_player_button_list:
-        button.ledBlink(on_time = .2, off_time = .2, count = 10, background = True)
-    sleep(2)
     for button in active_player_button_list:
         button.ledOff()
         
@@ -112,6 +108,7 @@ def determineTurnOrder(game_state):
     #Resets button state so that nothing will happen when pressed
     for button in player_button_list:
         button.when_pressed = None
+        button.ledOff()
     for button in auxillary_button_list:
         button.when_pressed = None
     
@@ -127,45 +124,43 @@ def gameRound(game_state, time_counter_list):
     if not pause_counter_dict:
         x = 0
         for button in active_player_button_list:
-            pause_counter_dict[button] = 0
-            pause_counter_dict["count" + x] = 0
+            pause_counter_dict.update({button : 0})
+            pause_counter_dict.update({("count" + str(x)) : 0})
             x += 1
-
 
     round_complete = False
     game_complete = False
-    
-    #Causes LEDS to blink for player postion... First blinks one time, Second blinks 2 times, etc.
-    for button in turn_order_button_list:
-        button.ledBlink(on_time = .15, off_time = .2, count = (turn_order_button_list.index(button) + 1), background = True)
 
-    def pause(button, active_player):
+    def pause(pause_button):
         '''Allows any player to pause the game and any player to unpause the game.  The time should only count for the active player and will be subtracted from his total turn time
            Secondary function allows us to see who paused the game the longest and the most.'''
         
         resetButtons()
 
-
-        button.held_down = True
-
-        active_player.is_paused = True
-        pause_start_time = time()
+        for button in active_player_button_list:
+            if button.activePlayer == True:
+                active_player.is_paused = True
+                pause_start_time = time()
+                button.ledOff()
+            
         
 
         while active_player.is_paused == True:
             
-            active_player.ledOff()
-            button.ledOn()
+            pause_button.ledOn()
 
             for button in active_player_button_list:
                 button.when_released = unpause
+            sleep(.2)
+            pause_button.ledOff()
+            sleep(.2)
             
         resetButtons()
 
         active_player.pauseTime += (time() - pause_start_time)
         pause_counter_dict[button] += (time() - pause_start_time)
-        pause_counter_dict["count" + active_player_button_list.index(button)] += 1
-        
+        pause_counter_dict["count" + str(active_player_button_list.index(button))] += 1
+
     def unpause(active_player):
         active_player.is_paused = False
 
@@ -174,7 +169,7 @@ def gameRound(game_state, time_counter_list):
         if active_player.held_down == True:
             active_player.held_down = False
         else:
-            turn_in_progress = False
+            active_player.activePlayer = False
 
 
     def resetButtons():
@@ -196,15 +191,18 @@ def gameRound(game_state, time_counter_list):
         game_complete = True
     
     def playerTurn(active_player):
+
         active_player.pauseTime = 0
-        turn_in_progress = True
+        active_player.activePlayer = True
         active_player.ledOn()
+
         player_turn_start_time = time()
-        while turn_in_progress == True:
+
+        while active_player.activePlayer == True:
             active_player.when_released = nextTurn
             for button in active_player_button_list:
-                button.when_held = pause(button, active_player)
-        sleep(.2)
+                button.when_held = pause
+
         resetButtons()
         active_player.ledOff()
         player_turn_end_time = time()

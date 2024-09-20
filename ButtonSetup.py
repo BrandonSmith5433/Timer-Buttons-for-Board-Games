@@ -14,6 +14,7 @@ class SetupPlayerButtons(Button):
 		self.led.off()
 		SetupPlayerButtons.button_list.append(self)
 		self.color = color
+		self.activePlayer = False 
 		self.held_down = False
 		self.pauseTime = 0
 		self.is_paused = False
